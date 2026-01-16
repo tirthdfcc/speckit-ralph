@@ -123,14 +123,17 @@ speckit-ralph loop 10 --agent claude
 
 ### Options
 
-| Option                   | Commands                       | Description                                      |
-| ------------------------ | ------------------------------ | ------------------------------------------------ |
-| `--agent`, `-a`          | `once`, `loop`                 | **Required.** Agent: `claude` or `codex`         |
-| `--keep-artifacts`, `-k` | `once`, `loop`                 | Keep temp files for debugging                    |
-| `--promise`, `-p`        | `once`, `loop`                 | Completion promise string                        |
-| `--detach`, `-d`         | `loop`                         | Run in background                                |
-| `--sleep`, `-s`          | `loop`                         | Seconds between iterations                       |
-| `--spec`, `-S`           | `once`, `loop`, `build-prompt` | Spec directory path (overrides branch detection) |
+| Option                   | Commands                                                  | Description                                      |
+| ------------------------ | --------------------------------------------------------- | ------------------------------------------------ |
+| `--agent`, `-a`          | `once`, `loop`                                            | **Required.** Agent: `claude` or `codex`         |
+| `--keep-artifacts`, `-k` | `once`, `loop`                                            | Keep temp files for debugging                    |
+| `--promise`, `-p`        | `once`, `loop`                                            | Completion promise string                        |
+| `--detach`, `-d`         | `loop`                                                    | Run in background                                |
+| `--sleep`, `-s`          | `loop`                                                    | Seconds between iterations                       |
+| `--spec`, `-S`           | `once`, `loop`, `build-prompt`                            | Spec directory path (overrides branch detection) |
+| `--root`, `-r`           | `init`, `show-activity`, `show-errors`, `show-guardrails` | Project root directory                           |
+| `--lines`, `-n`          | `show-activity`, `show-errors`                            | Number of lines to show (default: 50)            |
+| `--output`, `-o`         | `build-prompt`                                            | Output file path                                 |
 
 ### Examples
 
