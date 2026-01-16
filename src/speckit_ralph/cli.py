@@ -10,7 +10,6 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.prompt import Prompt
 
 app = typer.Typer(
     name="ralph",
@@ -175,48 +174,6 @@ def init(
             console.print(f"  - Created {name}")
     else:
         console.print(f"[yellow].ralph directory already exists at {ralph_dir}[/yellow]")
-
-
-@app.command()
-def add_sign(
-    root: Path | None = typer.Option(None, "--root", "-r", help="Project root directory"),
-    name: str | None = typer.Option(None, "--name", "-n", help="Sign name"),
-    trigger: str | None = typer.Option(None, "--trigger", "-t", help="When this sign applies"),
-    instruction: str | None = typer.Option(None, "--instruction", "-i", help="What to do"),
-    reason: str | None = typer.Option(None, "--reason", help="Why this sign was added"),
-) -> None:
-    """Add a new guardrail (sign) interactively or via options."""
-    root = resolve_root(root)
-    ralph_dir = get_ralph_dir(root)
-    guardrails_path = ralph_dir / GUARDRAILS_FILE
-
-    if not guardrails_path.exists():
-        console.print("[red]Error: .ralph/guardrails.md not found. Run 'ralph init' first.[/red]")
-        raise typer.Exit(1)
-
-    # Interactive prompts for missing values
-    if name is None:
-        name = Prompt.ask("[bold]Sign name[/bold]")
-    if trigger is None:
-        trigger = Prompt.ask("[bold]Trigger[/bold] (when does this apply?)")
-    if instruction is None:
-        instruction = Prompt.ask("[bold]Instruction[/bold] (what to do instead?)")
-    if reason is None:
-        reason = Prompt.ask("[bold]Added after[/bold] (why was this added?)", default="Manual addition")
-
-    # Build the sign block
-    sign_block = f"""
-### Sign: {name}
-- **Trigger**: {trigger}
-- **Instruction**: {instruction}
-- **Added after**: {reason}
-"""
-
-    # Append to guardrails file
-    with guardrails_path.open("a", encoding="utf-8") as f:
-        f.write(sign_block)
-
-    console.print(f"[green]Added sign: {name}[/green]")
 
 
 @app.command()

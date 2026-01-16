@@ -115,7 +115,6 @@ speckit-ralph loop 10
 | `speckit-ralph once`            | Run a single iteration         |
 | `speckit-ralph loop <N>`        | Run N iterations               |
 | `speckit-ralph init`            | Initialize .ralph directory    |
-| `speckit-ralph add-sign`        | Add a new guardrail            |
 | `speckit-ralph show-guardrails` | Display guardrails             |
 | `speckit-ralph show-activity`   | Display activity log           |
 | `speckit-ralph show-errors`     | Display errors log             |
@@ -155,15 +154,7 @@ speckit-ralph loop 10 --sleep 5
 
 Guardrails are **signs** — lessons learned from failures that prevent recurring mistakes. They are stored in `.ralph/guardrails.md` and injected into each iteration's prompt.
 
-### Adding a Sign
-
-```bash
-speckit-ralph add-sign \
-  --name "Test Before Commit" \
-  --trigger "Before committing changes" \
-  --instruction "Run pytest and fix all failures" \
-  --reason "Iteration 3 committed broken code"
-```
+Edit `.ralph/guardrails.md` directly to add new signs.
 
 ### Sign Format
 
