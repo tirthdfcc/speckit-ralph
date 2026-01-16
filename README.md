@@ -66,10 +66,10 @@ uv tool install speckit-ralph --from git+https://github.com/merllinsbeard/specki
 
 ```bash
 # Single iteration (HITL mode)
-speckit-ralph once
+speckit-ralph once --agent claude
 
 # Multiple iterations (AFK mode)
-speckit-ralph loop 10
+speckit-ralph loop 10 --agent claude
 ```
 
 ## 📽️ How It Works
@@ -88,7 +88,7 @@ speckit-ralph loop 10
 │                    Ralph Phase                              │
 │                  (Automated Loop)                           │
 ├─────────────────────────────────────────────────────────────┤
-│  speckit-ralph loop 10                                      │
+│  speckit-ralph loop 10 --agent claude                       │
 │    ├─ AI reads tasks.md, spec.md, plan.md                  │
 │    ├─ AI implements one task per iteration                 │
 │    ├─ AI sees previous work via git history (self-ref)     │
@@ -110,51 +110,79 @@ speckit-ralph loop 10
 
 ### Commands
 
-| Command                         | Description                    |
-| ------------------------------- | ------------------------------ |
-| `speckit-ralph once`            | Run a single iteration         |
-| `speckit-ralph loop <N>`        | Run N iterations               |
-| `speckit-ralph init`            | Initialize .ralph directory    |
-| `speckit-ralph show-guardrails` | Display guardrails             |
-| `speckit-ralph show-activity`   | Display activity log           |
-| `speckit-ralph show-errors`     | Display errors log             |
-| `speckit-ralph build-prompt`    | Generate prompt for inspection |
-| `speckit-ralph scripts-path`    | Print bundled scripts path     |
+| Command                         | Description                         |
+| ------------------------------- | ----------------------------------- |
+| `speckit-ralph once`            | Run a single iteration              |
+| `speckit-ralph loop <N>`        | Run N iterations                    |
+| `speckit-ralph init`            | Initialize .speckit-ralph directory |
+| `speckit-ralph show-guardrails` | Display guardrails                  |
+| `speckit-ralph show-activity`   | Display activity log                |
+| `speckit-ralph show-errors`     | Display errors log                  |
+| `speckit-ralph build-prompt`    | Generate prompt for inspection      |
+| `speckit-ralph scripts-path`    | Print bundled scripts path          |
 
 ### Options
 
-| Option                   | Commands       | Description                       |
-| ------------------------ | -------------- | --------------------------------- |
-| `--agent`, `-a`          | `once`, `loop` | Agent to use: `claude` or `codex` |
-| `--keep-artifacts`, `-k` | `once`, `loop` | Keep temp files for debugging     |
-| `--promise`, `-p`        | `once`, `loop` | Completion promise string         |
-| `--detach`, `-d`         | `loop`         | Run in background                 |
-| `--sleep`, `-s`          | `loop`         | Seconds between iterations        |
+| Option                   | Commands                       | Description                                      |
+| ------------------------ | ------------------------------ | ------------------------------------------------ |
+| `--agent`, `-a`          | `once`, `loop`                 | **Required.** Agent: `claude` or `codex`         |
+| `--keep-artifacts`, `-k` | `once`, `loop`                 | Keep temp files for debugging                    |
+| `--promise`, `-p`        | `once`, `loop`                 | Completion promise string                        |
+| `--detach`, `-d`         | `loop`                         | Run in background                                |
+| `--sleep`, `-s`          | `loop`                         | Seconds between iterations                       |
+| `--spec`, `-S`           | `once`, `loop`, `build-prompt` | Spec directory path (overrides branch detection) |
 
 ### Examples
 
 ```bash
 # Single iteration with Claude
-speckit-ralph once
+speckit-ralph once --agent claude
 
 # Single iteration with Codex
 speckit-ralph once --agent codex
 
-# 10 iterations, keep artifacts
-speckit-ralph loop 10 --keep-artifacts
+# 10 iterations with Claude, keep artifacts
+speckit-ralph loop 10 --agent claude --keep-artifacts
 
-# Run in background
-speckit-ralph loop 20 --detach
+# Run Codex in background
+speckit-ralph loop 20 --agent codex --detach
 
 # Custom sleep between iterations
-speckit-ralph loop 10 --sleep 5
+speckit-ralph loop 10 --agent claude --sleep 5
+
+# Multi-spec: explicitly specify which spec to use
+speckit-ralph loop 5 --agent claude --spec specs/feature/auth
+speckit-ralph once --agent codex --spec specs/feature/payments
 ```
+
+### Multi-Spec Projects
+
+By default, Ralph detects which spec to use based on your current git branch name (e.g., `feature/auth` maps to `specs/feature/auth/`).
+
+For projects with multiple specs, you can explicitly specify which spec to use:
+
+```bash
+# Override branch detection with --spec
+speckit-ralph loop 10 --agent claude --spec specs/feature/auth
+
+# Use relative path from repo root
+speckit-ralph once --agent codex --spec specs/feature/payments
+
+# Or absolute path
+speckit-ralph loop 5 --agent claude --spec /path/to/my-project/specs/feature/checkout
+```
+
+**When to use `--spec`:**
+
+- Working on a different spec than your current branch
+- Running multiple loops in parallel for different specs
+- Testing a spec from a non-feature branch (e.g., `main`)
 
 ## 🛡️ Guardrails (Signs)
 
-Guardrails are **signs** — lessons learned from failures that prevent recurring mistakes. They are stored in `.ralph/guardrails.md` and injected into each iteration's prompt.
+Guardrails are **signs** — lessons learned from failures that prevent recurring mistakes. They are stored in `.speckit-ralph/guardrails.md` and injected into each iteration's prompt.
 
-Edit `.ralph/guardrails.md` directly to add new signs.
+Edit `.speckit-ralph/guardrails.md` directly to add new signs.
 
 ### Sign Format
 
@@ -177,14 +205,14 @@ Edit `.ralph/guardrails.md` directly to add new signs.
 
 ## 📊 Activity Logging
 
-Ralph automatically logs all activity to `.ralph/activity.log`:
+Ralph automatically logs all activity to `.speckit-ralph/activity.log`:
 
 - Loop start/end events
 - Iteration start/end with duration
 - Errors and failures
 - Git HEAD changes per iteration
 
-Run summaries are stored in `.ralph/runs/` with:
+Run summaries are stored in `.speckit-ralph/runs/` with:
 
 - CLI used (claude or codex)
 - Duration
@@ -193,29 +221,42 @@ Run summaries are stored in `.ralph/runs/` with:
 
 ## ⚙️ Environment Variables
 
-| Variable                  | Default                   | Description                    |
-| ------------------------- | ------------------------- | ------------------------------ |
-| `RALPH_AGENT`             | `claude`                  | Agent: `claude` or `codex`     |
-| `RALPH_PROMISE`           | `COMPLETE`                | Completion promise string      |
-| `RALPH_SLEEP_SECONDS`     | `2` (claude), `1` (codex) | Seconds between iterations     |
-| `RALPH_ARTIFACT_DIR`      | (temp)                    | Directory for artifacts        |
-| `RALPH_SKIP_BRANCH_CHECK` | `0`                       | Skip feature branch validation |
-| `CODEX_SANDBOX`           | `workspace-write`         | Codex sandbox mode             |
-| `CODEX_APPROVAL_POLICY`   | `never`                   | Codex approval policy          |
+| Variable                  | Default                   | Description                          |
+| ------------------------- | ------------------------- | ------------------------------------ |
+| `RALPH_AGENT`             | `claude`                  | Agent: `claude` or `codex`           |
+| `RALPH_PROMISE`           | `COMPLETE`                | Completion promise string            |
+| `RALPH_SLEEP_SECONDS`     | `2` (claude), `1` (codex) | Seconds between iterations           |
+| `RALPH_ARTIFACT_DIR`      | (temp)                    | Directory for artifacts              |
+| `RALPH_SKIP_BRANCH_CHECK` | `0`                       | Skip feature branch validation       |
+| `RALPH_SPEC_DIR`          | (auto)                    | Override spec directory (multi-spec) |
+| `CODEX_SANDBOX`           | `workspace-write`         | Codex sandbox mode                   |
+| `CODEX_APPROVAL_POLICY`   | `never`                   | Codex approval policy                |
 
 ## 🔍 Troubleshooting
 
-### .specify common script not found
+### SPEC-KIT not initialized
 
 ```
-ERROR: .specify common script not found
+ERROR: SPEC-KIT not initialized in this project.
 ```
 
-**Solution:** Install SPEC-KIT first:
+**Solution:** Ralph requires SPEC-KIT to be set up first. Run these commands:
 
 ```bash
+# 1. Install SPEC-KIT
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+
+# 2. Initialize SPEC-KIT in your project
 specify init . --here --ai claude
+
+# 3. Create your spec in Claude Code
+/speckit.specify
+/speckit.plan
+/speckit.tasks
+
+# 4. Now Ralph can run
+speckit-ralph init
+speckit-ralph loop 10
 ```
 
 ### plan.md not found

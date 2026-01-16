@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 
 app = typer.Typer(
-    name="ralph",
+    name="speckit-ralph",
     help="Ralph Wiggum Loop - Iterative AI coding for Claude Code and Codex",
     no_args_is_help=True,
 )
@@ -22,7 +22,7 @@ console = Console()
 # Ralph Directory Management
 # =============================================================================
 
-RALPH_DIR_NAME = ".ralph"
+RALPH_DIR_NAME = ".speckit-ralph"
 GUARDRAILS_FILE = "guardrails.md"
 ACTIVITY_LOG_FILE = "activity.log"
 ERRORS_LOG_FILE = "errors.log"
@@ -35,7 +35,7 @@ def resolve_root(root: Path | None) -> Path:
 
 
 def get_ralph_dir(root: Path | None = None) -> Path:
-    """Get the .ralph directory path."""
+    """Get the .speckit-ralph directory path."""
     return resolve_root(root) / RALPH_DIR_NAME
 
 
@@ -78,14 +78,17 @@ def run_script(script_name: str, args: list[str] | None = None, env: dict | None
 
 @app.command()
 def once(
-    agent: str = typer.Option("claude", "--agent", "-a", help="Agent to use: claude or codex"),
+    agent: str = typer.Option(..., "--agent", "-a", help="Agent to use: claude or codex"),
     keep_artifacts: bool = typer.Option(False, "--keep-artifacts", "-k", help="Keep temp files for debugging"),
     promise: str = typer.Option("COMPLETE", "--promise", "-p", help="Completion promise string"),
+    spec: str | None = typer.Option(None, "--spec", "-S", help="Spec directory path (overrides branch detection)"),
 ):
     """Run a single Ralph iteration."""
     env = {"RALPH_PROMISE": promise, "RALPH_AGENT": agent}
     if keep_artifacts:
         env["RALPH_ARTIFACT_DIR"] = str(Path(tempfile.gettempdir()) / f"ralph-{agent}-debug")
+    if spec:
+        env["RALPH_SPEC_DIR"] = spec
 
     sys.exit(run_script("ralph-once.sh", env=env))
 
@@ -93,11 +96,12 @@ def once(
 @app.command()
 def loop(
     iterations: int = typer.Argument(..., help="Number of iterations to run"),
-    agent: str = typer.Option("claude", "--agent", "-a", help="Agent to use: claude or codex"),
+    agent: str = typer.Option(..., "--agent", "-a", help="Agent to use: claude or codex"),
     detach: bool = typer.Option(False, "--detach", "-d", help="Run in background"),
     keep_artifacts: bool = typer.Option(False, "--keep-artifacts", "-k", help="Keep temp files"),
     promise: str = typer.Option("COMPLETE", "--promise", "-p", help="Completion promise string"),
     sleep: int | None = typer.Option(None, "--sleep", "-s", help="Seconds between iterations"),
+    spec: str | None = typer.Option(None, "--spec", "-S", help="Spec directory path (overrides branch detection)"),
 ):
     """Run Ralph loop for multiple iterations."""
     args = [str(iterations), "--agent", agent]
@@ -111,6 +115,8 @@ def loop(
         env["RALPH_ARTIFACT_DIR"] = str(Path(tempfile.gettempdir()) / f"ralph-{agent}-loop")
     if sleep is not None:
         env["RALPH_SLEEP_SECONDS"] = str(sleep)
+    if spec:
+        env["RALPH_SPEC_DIR"] = spec
 
     sys.exit(run_script("ralph-loop.sh", args=args, env=env))
 
@@ -118,13 +124,18 @@ def loop(
 @app.command()
 def build_prompt(
     output: Path | None = typer.Option(None, "--output", "-o", help="Output file path"),
+    spec: str | None = typer.Option(None, "--spec", "-S", help="Spec directory path (overrides branch detection)"),
 ) -> None:
     """Generate Ralph prompt from template."""
     args = []
     if output:
         args.extend(["--output", str(output)])
 
-    sys.exit(run_script("build-prompt.sh", args=args))
+    env = {}
+    if spec:
+        env["RALPH_SPEC_DIR"] = spec
+
+    sys.exit(run_script("build-prompt.sh", args=args, env=env if env else None))
 
 
 @app.command()
@@ -142,7 +153,7 @@ def scripts_path() -> None:
 def init(
     root: Path | None = typer.Option(None, "--root", "-r", help="Project root directory"),
 ) -> None:
-    """Initialize .ralph directory with default files."""
+    """Initialize .speckit-ralph directory with default files."""
     root = resolve_root(root)
     ralph_dir = get_ralph_dir(root)
     runs_dir = ralph_dir / RUNS_DIR_NAME
@@ -169,11 +180,11 @@ def init(
             created.append(target_name)
 
     if created:
-        console.print(f"[green]Initialized .ralph directory at {ralph_dir}[/green]")
+        console.print(f"[green]Initialized .speckit-ralph directory at {ralph_dir}[/green]")
         for name in created:
             console.print(f"  - Created {name}")
     else:
-        console.print(f"[yellow].ralph directory already exists at {ralph_dir}[/yellow]")
+        console.print(f"[yellow].speckit-ralph directory already exists at {ralph_dir}[/yellow]")
 
 
 @app.command()
@@ -187,7 +198,7 @@ def show_activity(
     activity_path = ralph_dir / ACTIVITY_LOG_FILE
 
     if not activity_path.exists():
-        console.print("[red]Error: .ralph/activity.log not found. Run 'ralph init' first.[/red]")
+        console.print("[red]Error: .speckit-ralph/activity.log not found. Run 'speckit-ralph init' first.[/red]")
         raise typer.Exit(1)
 
     content = activity_path.read_text(encoding="utf-8")
@@ -211,7 +222,7 @@ def show_errors(
     errors_path = ralph_dir / ERRORS_LOG_FILE
 
     if not errors_path.exists():
-        console.print("[red]Error: .ralph/errors.log not found. Run 'ralph init' first.[/red]")
+        console.print("[red]Error: .speckit-ralph/errors.log not found. Run 'speckit-ralph init' first.[/red]")
         raise typer.Exit(1)
 
     content = errors_path.read_text(encoding="utf-8")
@@ -234,7 +245,7 @@ def show_guardrails(
     guardrails_path = ralph_dir / GUARDRAILS_FILE
 
     if not guardrails_path.exists():
-        console.print("[red]Error: .ralph/guardrails.md not found. Run 'ralph init' first.[/red]")
+        console.print("[red]Error: .speckit-ralph/guardrails.md not found. Run 'speckit-ralph init' first.[/red]")
         raise typer.Exit(1)
 
     content = guardrails_path.read_text(encoding="utf-8")
