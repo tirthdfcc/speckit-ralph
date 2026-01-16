@@ -7,7 +7,8 @@ set -euo pipefail
 # =============================================================================
 
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(CDPATH="" cd "$SCRIPT_DIR/../.." && pwd)"
+# Find repo root from current directory (not script location - script may be installed globally)
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 COMMON_SCRIPT="$REPO_ROOT/.specify/scripts/bash/common.sh"
 
 # =============================================================================
