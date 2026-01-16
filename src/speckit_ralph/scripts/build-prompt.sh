@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# build-prompt.sh - Generate Ralph prompt from template with variable substitution
+#
+# Usage:
+#   ./build-prompt.sh                    # Output to temp file
+#   ./build-prompt.sh --output FILE      # Output to specific file
+#
+
+set -euo pipefail
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/ralph-env.sh"
+
+TEMPLATE="$SCRIPT_DIR/prompt-template.md"
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+# Print error message to stderr and exit
+die() {
+  echo "ERROR: $1" >&2
+  exit 1
+}
+
+# Return file path if exists, otherwise "N/A"
+resolve_file_path() {
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    echo "$path"
+  else
+    echo "N/A"
+  fi
+}
+
+# Return directory path if exists and non-empty, otherwise "N/A"
+resolve_dir_path() {
+  local path="$1"
+  if [[ -d "$path" ]] && [[ -n "$(ls -A "$path" 2>/dev/null)" ]]; then
+    echo "$path"
+  else
+    echo "N/A"
+  fi
+}
+
+# Return value if non-empty, otherwise "N/A"
+resolve_value() {
+  local value="$1"
+  if [[ -n "$value" ]]; then
+    echo "$value"
+  else
+    echo "N/A"
+  fi
+}
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+
+parse_output_file() {
+  if [[ "${1:-}" == "--output" ]]; then
+    local output="${2:-}"
+    [[ -n "$output" ]] || die "--output requires a path"
+    echo "$output"
+  else
+    mktemp -t ralph-prompt.XXXXXX
+  fi
+}
+
+# =============================================================================
+# Main
+# =============================================================================
+
+[[ -f "$TEMPLATE" ]] || die "prompt template not found at $TEMPLATE"
+
+OUTPUT_FILE="$(parse_output_file "${1:-}" "${2:-}")"
+PROMISE="${RALPH_PROMISE:-COMPLETE}"
+
+# Resolve optional paths (set to "N/A" if missing)
+RESEARCH_PATH="$(resolve_file_path "$RESEARCH")"
+DATA_MODEL_PATH="$(resolve_file_path "$DATA_MODEL")"
+QUICKSTART_PATH="$(resolve_file_path "$QUICKSTART")"
+CONTRACTS_PATH="$(resolve_dir_path "$CONTRACTS_DIR")"
+REPO_SLUG_VALUE="$(resolve_value "$REPO_SLUG")"
+
+# =============================================================================
+# Template Rendering
+# =============================================================================
+
+export TEMPLATE OUTPUT_FILE PROMISE
+export RESEARCH_PATH DATA_MODEL_PATH QUICKSTART_PATH CONTRACTS_PATH REPO_SLUG_VALUE
+
+python - <<'PY'
+import os
+from pathlib import Path
+
+template_path = Path(os.environ["TEMPLATE"])
+output_path = Path(os.environ["OUTPUT_FILE"])
+
+values = {
+    "REPO_ROOT": os.environ["REPO_ROOT"],
+    "FEATURE_DIR": os.environ["FEATURE_DIR"],
+    "FEATURE_SPEC": os.environ["FEATURE_SPEC"],
+    "IMPL_PLAN": os.environ["IMPL_PLAN"],
+    "TASKS": os.environ["TASKS"],
+    "PROGRESS_FILE": os.environ["PROGRESS_FILE"],
+    "RESEARCH": os.environ["RESEARCH_PATH"],
+    "DATA_MODEL": os.environ["DATA_MODEL_PATH"],
+    "CONTRACTS_DIR": os.environ["CONTRACTS_PATH"],
+    "QUICKSTART": os.environ["QUICKSTART_PATH"],
+    "REPO_SLUG": os.environ["REPO_SLUG_VALUE"],
+    "PROMISE": os.environ["PROMISE"],
+}
+
+content = template_path.read_text(encoding="utf-8")
+for key, value in values.items():
+    content = content.replace("{{%s}}" % key, value)
+
+output_path.write_text(content, encoding="utf-8")
+print(str(output_path))
+PY
