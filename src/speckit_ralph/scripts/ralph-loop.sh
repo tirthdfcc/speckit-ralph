@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(CDPATH="" cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 usage() {
   cat <<EOF
