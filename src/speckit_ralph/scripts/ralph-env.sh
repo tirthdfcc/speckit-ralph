@@ -61,15 +61,59 @@ extract_repo_slug() {
 }
 
 # =============================================================================
-# Load Common Utilities
+# Load Common Utilities (SPEC-KIT dependency)
 # =============================================================================
 
-require_file "$COMMON_SCRIPT" ".specify common script" "speckit setup"
+# Check for SPEC-KIT setup with detailed guidance
+if [[ ! -f "$COMMON_SCRIPT" ]]; then
+  echo "" >&2
+  echo "ERROR: SPEC-KIT not initialized in this project." >&2
+  echo "" >&2
+  echo "Ralph requires SPEC-KIT to be set up first. Run these commands:" >&2
+  echo "" >&2
+  echo "  1. Install SPEC-KIT:" >&2
+  echo "     uv tool install specify-cli --from git+https://github.com/github/spec-kit.git" >&2
+  echo "" >&2
+  echo "  2. Initialize SPEC-KIT in your project:" >&2
+  echo "     specify init . --here --ai claude" >&2
+  echo "" >&2
+  echo "  3. Create your spec with /speckit.specify in Claude Code" >&2
+  echo "" >&2
+  echo "Then run 'speckit-ralph init' to set up Ralph." >&2
+  echo "" >&2
+  exit 1
+fi
 
 # shellcheck source=/dev/null
 source "$COMMON_SCRIPT"
 
 eval "$(get_feature_paths)"
+
+# =============================================================================
+# Spec Directory Override (--spec flag)
+# =============================================================================
+
+# If RALPH_SPEC_DIR is set, override the branch-detected paths
+if [[ -n "${RALPH_SPEC_DIR:-}" ]]; then
+  # Handle relative paths by prepending REPO_ROOT
+  if [[ "$RALPH_SPEC_DIR" == /* ]]; then
+    FEATURE_DIR="$RALPH_SPEC_DIR"
+  else
+    FEATURE_DIR="$REPO_ROOT/$RALPH_SPEC_DIR"
+  fi
+
+  # Override spec-related paths
+  FEATURE_SPEC="$FEATURE_DIR/spec.md"
+  IMPL_PLAN="$FEATURE_DIR/plan.md"
+  TASKS="$FEATURE_DIR/tasks.md"
+  RESEARCH="$FEATURE_DIR/research.md"
+  DATA_MODEL="$FEATURE_DIR/data-model.md"
+  QUICKSTART="$FEATURE_DIR/quickstart.md"
+  CONTRACTS_DIR="$FEATURE_DIR/contracts"
+
+  # Skip branch validation when using explicit spec
+  RALPH_SKIP_BRANCH_CHECK=1
+fi
 
 # =============================================================================
 # Branch Validation
@@ -108,16 +152,16 @@ HEADER
 fi
 
 # =============================================================================
-# Ralph Directory Setup (.ralph/)
+# Ralph Directory Setup (.speckit-ralph/)
 # =============================================================================
 
-RALPH_DIR="${RALPH_DIR:-$REPO_ROOT/.ralph}"
+RALPH_DIR="${RALPH_DIR:-$REPO_ROOT/.speckit-ralph}"
 RALPH_GUARDRAILS="$RALPH_DIR/guardrails.md"
 RALPH_ACTIVITY_LOG="$RALPH_DIR/activity.log"
 RALPH_ERRORS_LOG="$RALPH_DIR/errors.log"
 RALPH_RUNS_DIR="$RALPH_DIR/runs"
 
-# Initialize .ralph directory and files if they don't exist
+# Initialize .speckit-ralph directory and files if they don't exist
 init_ralph_dir() {
   mkdir -p "$RALPH_DIR" "$RALPH_RUNS_DIR"
 

@@ -21,8 +21,8 @@ AGENT_CODEX_SANDBOX="${CODEX_SANDBOX:-workspace-write}"
 AGENT_CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-never}"
 AGENT_CODEX_SLEEP_DEFAULT=1
 
-# Default agent
-DEFAULT_AGENT="${RALPH_AGENT:-claude}"
+# Default agent (no fallback - must be specified via CLI or RALPH_AGENT env var)
+DEFAULT_AGENT="${RALPH_AGENT:-}"
 
 # =============================================================================
 # Helper Functions
